@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+data/
+*.sqlite
+*.sqlite-journal
+tokens/
+.DS_Store
+*.log
+client_secret.json
+marie-kondo-email-cleaner.json
+marie-kondo-email-cleaner-client_secret_443834333086-oqgq70vgtd43pgbn3cdt4oejcr7lohe6.apps.googleusercontent.com.json

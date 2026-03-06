@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marie Kondo Email Triage</title>
+    <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="container">
+                <h1 class="app-title">🧹 Marie Kondo Email Triage</h1>
+                <div id="user-info" class="user-info" style="display: none;">
+                    <img id="user-avatar" class="user-avatar" alt="User" />
+                    <span id="user-name" class="user-name"></span>
+                    <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen active">
+            <div class="container center">
+                <div class="login-box">
+                    <h2>Welcome to Marie Kondo Email Triage</h2>
+                    <p>Declutter your inbox with smart email categorization and unsubscribe detection.</p>
+                    <button id="login-btn" class="btn btn-primary btn-large">
+                        Login with Gmail
+                    </button>
+                    <div class="features">
+                        <h3>Features:</h3>
+                        <ul>
+                            <li>✅ Scan and categorize promotional emails</li>
+                            <li>✅ Detect unsubscribe links automatically</li>
+                            <li>✅ Smart triage suggestions</li>
+                            <li>✅ Bulk archive with one click</li>
+                            <li>✅ Never deletes emails without permission</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="main-screen" class="screen">
+            <!-- Navigation -->
+            <nav class="app-nav">
+                <div class="container">
+                    <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-view="triage">Triage Queue</button>
+                    <button class="nav-btn" data-view="emails">All Emails</button>
+                    <button class="nav-btn" data-view="senders">Top Senders</button>
+                </div>
+            </nav>
+
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view active">
+                <div class="container">
+                    <div class="scan-section">
+                        <button id="scan-btn" class="btn btn-primary">Scan Emails</button>
+                        <div id="scan-progress" class="scan-progress" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="progress-fill" class="progress-fill"></div>
+                            </div>
+                            <p id="progress-text" class="progress-text"></p>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Total Scanned</h3>
+                            <p id="stat-scanned" class="stat-value">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Archived</h3>
+                            <p id="stat-archived" class="stat-value">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Unsubscribed</h3>
+                            <p id="stat-unsubscribed" class="stat-value">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Pending Triage</h3>
+                            <p id="stat-pending" class="stat-value">0</p>
+                        </div>
+                    </div>
+
+                    <div id="top-senders-widget" class="widget">
+                        <h3>Top Senders</h3>
+                        <div id="top-senders-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Triage Queue View -->
+            <div id="triage-view" class="view">
+                <div class="container">
+                    <div class="view-header">
+                        <h2>Triage Queue</h2>
+                        <button id="bulk-approve-btn" class="btn btn-primary">Approve Selected</button>
+                    </div>
+
+                    <div id="triage-queue" class="triage-queue">
+                        <p class="loading">Loading triage items...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Emails View -->
+            <div id="emails-view" class="view">
+                <div class="container">
+                    <h2>Scanned Emails</h2>
+                    <div id="emails-list" class="emails-list">
+                        <p class="loading">Loading emails...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Senders View -->
+            <div id="senders-view" class="view">
+                <div class="container">
+                    <h2>Top Senders</h2>
+                    <div id="senders-list" class="senders-list">
+                        <p class="loading">Loading senders...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

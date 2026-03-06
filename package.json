@@ -1,0 +1,46 @@
+{
+  "name": "marie-kondo-email",
+  "version": "1.0.0",
+  "description": "Email triage application for managing Gmail emails with smart categorization and unsubscribe detection",
+  "main": "dist/server/index.js",
+  "scripts": {
+    "build": "tsc && npm run build:client && npm run copy-assets",
+    "build:client": "esbuild src/client/js/app.ts --bundle --outfile=dist/client/js/app.js --platform=browser --target=es2020",
+    "copy-assets": "mkdir -p dist/server/database dist/client/styles && cp src/server/database/schema.sql dist/server/database/ && cp src/client/index.html dist/client/ && cp src/client/styles/main.css dist/client/styles/",
+    "dev": "concurrently \"tsc --watch\" \"nodemon dist/server/index.js\"",
+    "start": "node dist/server/index.js",
+    "setup-db": "node dist/server/scripts/setup-database.js"
+  },
+  "keywords": [
+    "email",
+    "gmail",
+    "triage",
+    "unsubscribe",
+    "productivity"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-session": "1.19.0",
+    "googleapis": "^128.0.0",
+    "memorystore": "1.6.7",
+    "node-fetch": "^2.7.0",
+    "sql.js": "^1.10.3"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.6",
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.17.10",
+    "@types/node": "^20.10.6",
+    "@types/node-fetch": "2.6.13",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.19.11",
+    "nodemon": "^3.0.2",
+    "typescript": "^5.3.3"
+  }
+}
