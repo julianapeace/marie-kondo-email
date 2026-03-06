@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "createos": {
+      "source": "NodeOps-app/skills",
+      "sourceType": "github",
+      "computedHash": "7fed6d8d559347652e635600b2129e34ee766bee226148e2c208cd04c9de012a"
+    }
+  }
+}
