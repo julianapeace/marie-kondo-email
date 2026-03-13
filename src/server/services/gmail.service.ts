@@ -55,6 +55,25 @@ export class GmailService {
     }
   }
 
+  async listMessagesByLabel(labelId: string, maxResults: number = 500, pageToken?: string): Promise<{ messages: GmailMessage[]; nextPageToken?: string }> {
+    try {
+      const response = await this.gmail.users.messages.list({
+        userId: 'me',
+        labelIds: [labelId],
+        maxResults,
+        pageToken
+      });
+
+      return {
+        messages: (response.data.messages || []) as GmailMessage[],
+        nextPageToken: response.data.nextPageToken || undefined
+      };
+    } catch (error) {
+      console.error('Error listing messages by label:', error);
+      throw new Error('Failed to list messages by label');
+    }
+  }
+
   async getMessage(messageId: string, format: 'full' | 'metadata' | 'minimal' = 'full'): Promise<GmailMessage> {
     try {
       const response = await this.gmail.users.messages.get({

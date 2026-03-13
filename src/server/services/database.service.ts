@@ -323,6 +323,19 @@ export class DatabaseService {
     return result;
   }
 
+  getTriageItemWithGmailId(id: number): any {
+    const stmt = this.db.prepare(`
+      SELECT tq.*, e.gmail_id
+      FROM triage_queue tq
+      JOIN emails e ON tq.email_id = e.id
+      WHERE tq.id = ?
+    `);
+    stmt.bind([id]);
+    const result = stmt.step() ? stmt.getAsObject() : null;
+    stmt.free();
+    return result;
+  }
+
   // Unsubscribe methods operations
   createUnsubscribeMethod(emailId: number, methodData: {
     method_type: 'one-click' | 'https' | 'mailto';

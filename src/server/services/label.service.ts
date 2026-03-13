@@ -5,7 +5,8 @@ export class LabelService {
   private readonly DEFAULT_LABELS = {
     TRIAGE_REVIEW: 'Triage/Review',
     TRIAGE_ARCHIVED: 'Triage/Archived',
-    TRIAGE_UNSUBSCRIBED: 'Triage/Unsubscribed'
+    TRIAGE_UNSUBSCRIBED: 'Triage/Unsubscribed',
+    TRIAGE_AUTO_DELETE: 'Triage/Auto-Delete'
   };
 
   constructor(
@@ -20,25 +21,34 @@ export class LabelService {
     }
   }
 
+  async applyLabelToGmailMessage(gmailMessageId: string, labelName: string): Promise<void> {
+    if (!gmailMessageId || typeof gmailMessageId !== 'string') {
+      throw new Error('Invalid Gmail message ID');
+    }
+    const labelId = await this.gmailService.getOrCreateLabel(labelName);
+    await this.gmailService.modifyLabels(gmailMessageId, [labelId], []);
+    this.db.logAction(
+      this.userId,
+      'apply_label',
+      'email',
+      gmailMessageId,
+      'success',
+      undefined,
+      { label: labelName }
+    );
+  }
+
   async applyLabel(emailId: number, labelName: string): Promise<void> {
     try {
       const email = this.db.getEmailById(emailId);
       if (!email) {
         throw new Error('Email not found');
       }
-
-      const labelId = await this.gmailService.getOrCreateLabel(labelName);
-      await this.gmailService.modifyLabels(email.gmail_id, [labelId], []);
-
-      this.db.logAction(
-        this.userId,
-        'apply_label',
-        'email',
-        email.gmail_id,
-        'success',
-        undefined,
-        { label: labelName }
-      );
+      const gmailId = email.gmail_id ?? (email as any).GMAIL_ID;
+      if (!gmailId) {
+        throw new Error('Email has no Gmail message ID');
+      }
+      await this.applyLabelToGmailMessage(gmailId, labelName);
     } catch (error) {
       this.db.logAction(
         this.userId,
@@ -59,7 +69,8 @@ export class LabelService {
     for (const emailId of emailIds) {
       const email = this.db.getEmailById(emailId);
       if (email) {
-        gmailIds.push(email.gmail_id);
+        const gmailId = email.gmail_id ?? (email as any).GMAIL_ID;
+        if (gmailId) gmailIds.push(gmailId);
       }
     }
 

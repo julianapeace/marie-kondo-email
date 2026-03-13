@@ -41,6 +41,10 @@ class MarieKondoEmailApp {
     const bulkApproveBtn = document.getElementById('bulk-approve-btn');
     bulkApproveBtn?.addEventListener('click', () => this.handleBulkApprove());
 
+    // Delete all auto-delete button
+    const executeAutoDeleteBtn = document.getElementById('execute-auto-delete-btn');
+    executeAutoDeleteBtn?.addEventListener('click', () => this.handleExecuteAutoDelete());
+
     // Check for auth callback
     const params = new URLSearchParams(window.location.search);
     if (params.get('auth') === 'success') {
@@ -235,14 +239,18 @@ class MarieKondoEmailApp {
 
     const response = await api.getTriageQueue();
 
-    if (response.success && response.data) {
-      if (response.data.length === 0) {
-        queue.innerHTML =
-          '<p class="loading">No pending triage items. Scan emails to generate suggestions.</p>';
-        return;
-      }
+    if (!response.success || !Array.isArray(response.data)) {
+      queue.innerHTML = `<p class="loading">${response.error || 'Failed to load triage queue.'}</p>`;
+      return;
+    }
 
-      queue.innerHTML = response.data
+    if (response.data.length === 0) {
+      queue.innerHTML =
+        '<p class="loading">No pending triage items. Scan emails to generate suggestions.</p>';
+      return;
+    }
+
+    queue.innerHTML = response.data
         .map(
           (item: any) => `
         <div class="triage-item">
@@ -282,7 +290,6 @@ class MarieKondoEmailApp {
           }
         });
       });
-    }
   }
 
   private formatActionType(type: string): string {
@@ -322,12 +329,39 @@ class MarieKondoEmailApp {
     const response = await api.bulkApproveTriage(ids);
 
     if (response.success) {
-      this.showToast(`Approved ${ids.length} items`, 'success');
+      this.showToast(`Marked ${ids.length} items for deletion`, 'success');
       this.selectedTriageIds.clear();
       this.loadTriageQueue();
       this.loadDashboard();
     } else {
       this.showToast(response.error || 'Bulk approve failed', 'error');
+    }
+  }
+
+  private async handleExecuteAutoDelete() {
+    const btn = document.getElementById('execute-auto-delete-btn') as HTMLButtonElement;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Archiving...';
+    }
+    try {
+      const response = await api.executeAutoDelete();
+      if (response.success && response.data?.archived !== undefined) {
+        this.showToast(
+          response.data.archived === 0
+            ? 'No emails labeled for auto-delete'
+            : `Archived ${response.data.archived} email(s)`,
+          'success'
+        );
+        this.loadDashboard();
+      } else {
+        this.showToast(response.error || 'Failed to execute auto-delete', 'error');
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Delete all auto-delete';
+      }
     }
   }
 

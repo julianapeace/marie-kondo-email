@@ -99,7 +99,22 @@
                 <div class="container">
                     <div class="view-header">
                         <h2>Triage Queue</h2>
-                        <button id="bulk-approve-btn" class="btn btn-primary">Approve Selected</button>
+                        <div class="view-actions">
+                            <button id="bulk-approve-btn" class="btn btn-primary">Approve Selected</button>
+                            <button id="execute-auto-delete-btn" class="btn btn-secondary">Delete all auto-delete</button>
+                        </div>
+                    </div>
+
+                    <div class="triage-instructions">
+                        <h3>What is this?</h3>
+                        <p>After you <strong>Scan Emails</strong>, the app suggests which messages to archive (remove from inbox), unsubscribe from, or keep for review. This queue lists those suggestions.</p>
+                        <h3>How to use it</h3>
+                        <ul>
+                            <li><strong>Approve</strong> — Mark this suggestion as correct (e.g. “archive” or “archive + unsubscribe”). The email is labeled for deletion but not removed yet.</li>
+                            <li><strong>Reject</strong> — Dismiss the suggestion and keep the email as-is.</li>
+                            <li><strong>Approve Selected</strong> — Mark all checked items as approved at once.</li>
+                            <li><strong>Delete all auto-delete</strong> — Permanently archive every email you’ve approved for deletion. Run this when you’re ready to clear them from your inbox.</li>
+                        </ul>
                     </div>
 
                     <div id="triage-queue" class="triage-queue">

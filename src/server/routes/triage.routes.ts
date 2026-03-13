@@ -15,13 +15,13 @@ export function createTriageRouter(
   const router = Router();
 
   // Get triage queue
-  router.get('/queue', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  router.get('/queue', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.userId!;
       const status = (req.query.status as string) || 'pending';
 
       const triageService = new TriageService(db, userId);
-      const queue = triageService.getTriageQueue(status);
+      const queue = await triageService.getTriageQueue(status);
 
       res.json({
         success: true,
@@ -42,7 +42,7 @@ export function createTriageRouter(
       const userId = req.userId!;
       const triageId = parseInt(req.params.id);
 
-      const triageItem = db.getTriageItemById(triageId);
+      const triageItem = db.getTriageItemWithGmailId(triageId);
       if (!triageItem) {
         return res.status(404).json({
           success: false,
@@ -50,35 +50,32 @@ export function createTriageRouter(
         });
       }
 
-      // Approve the item
       const triageService = new TriageService(db, userId);
       await triageService.approveTriageItem(triageId);
 
-      // Execute the action
       const auth = await authService.getAuthenticatedClient(userId);
       const gmailService = new GmailService(auth);
       const labelService = new LabelService(gmailService, db, userId);
-      const archiveService = new ArchiveService(gmailService, db, labelService, userId);
 
       switch (triageItem.action_type) {
         case 'archive':
-          await archiveService.archiveByTriageId(triageId);
+        case 'archive_and_unsubscribe':
+          if (triageItem.gmail_id) {
+            await labelService.applyLabelToGmailMessage(triageItem.gmail_id, 'Triage/Auto-Delete');
+          } else {
+            await labelService.applyLabel(triageItem.email_id, 'Triage/Auto-Delete');
+          }
+          db.updateTriageStatus(triageId, 'approved');
           break;
 
         case 'unsubscribe':
-          // Mark for manual unsubscribe
           db.updateTriageStatus(triageId, 'executed');
-          break;
-
-        case 'archive_and_unsubscribe':
-          await archiveService.archiveByTriageId(triageId);
-          // Unsubscribe will be handled separately
           break;
       }
 
       res.json({
         success: true,
-        message: 'Triage item approved and executed'
+        message: triageItem.action_type === 'unsubscribe' ? 'Triage item executed' : 'Marked for deletion (use Delete all auto-delete to archive)'
       });
     } catch (error) {
       console.error('Error approving triage item:', error);
@@ -111,6 +108,77 @@ export function createTriageRouter(
     }
   });
 
+  // Execute auto-delete: archive all emails with Triage/Auto-Delete label
+  router.post('/execute-auto-delete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const auth = await authService.getAuthenticatedClient(userId);
+      const gmailService = new GmailService(auth);
+      const labelService = new LabelService(gmailService, db, userId);
+      const archiveService = new ArchiveService(gmailService, db, labelService, userId);
+
+      const autoDeleteLabelId = await gmailService.getOrCreateLabel('Triage/Auto-Delete');
+      const allGmailIds: string[] = [];
+      let pageToken: string | undefined;
+
+      do {
+        const { messages, nextPageToken } = await gmailService.listMessagesByLabel(autoDeleteLabelId, 500, pageToken);
+        allGmailIds.push(...messages.map((m) => m.id));
+        pageToken = nextPageToken;
+      } while (pageToken);
+
+      if (allGmailIds.length === 0) {
+        return res.json({
+          success: true,
+          data: { archived: 0 },
+          message: 'No emails labeled for auto-delete'
+        });
+      }
+
+      const inDbEmailIds: number[] = [];
+      const notInDbGmailIds: string[] = [];
+      for (const gmailId of allGmailIds) {
+        const email = db.getEmailByGmailId(gmailId);
+        if (email) inDbEmailIds.push(email.id);
+        else notInDbGmailIds.push(gmailId);
+      }
+
+      if (inDbEmailIds.length > 0) {
+        const batchSize = 50;
+        for (let i = 0; i < inDbEmailIds.length; i += batchSize) {
+          await archiveService.archiveMultipleEmails(inDbEmailIds.slice(i, i + batchSize));
+        }
+      }
+      if (notInDbGmailIds.length > 0) {
+        const batchSize = 100;
+        for (let i = 0; i < notInDbGmailIds.length; i += batchSize) {
+          await gmailService.archiveMessages(notInDbGmailIds.slice(i, i + batchSize));
+        }
+      }
+
+      const removeLabelBatchSize = 100;
+      for (let i = 0; i < allGmailIds.length; i += removeLabelBatchSize) {
+        await gmailService.batchModifyLabels(
+          allGmailIds.slice(i, i + removeLabelBatchSize),
+          [],
+          [autoDeleteLabelId]
+        );
+      }
+
+      res.json({
+        success: true,
+        data: { archived: allGmailIds.length },
+        message: `Archived ${allGmailIds.length} email(s)`
+      });
+    } catch (error) {
+      console.error('Error executing auto-delete:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to execute auto-delete'
+      });
+    }
+  });
+
   // Bulk approve
   router.post('/bulk-approve', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -131,19 +199,21 @@ export function createTriageRouter(
       const archiveService = new ArchiveService(gmailService, db, labelService, userId);
 
       for (const triageId of triageIds) {
-        const triageItem = db.getTriageItemById(triageId);
-        if (triageItem) {
-          await triageService.approveTriageItem(triageId);
-
-          if (triageItem.action_type === 'archive' || triageItem.action_type === 'archive_and_unsubscribe') {
-            await archiveService.archiveByTriageId(triageId);
+        const triageItem = db.getTriageItemWithGmailId(triageId);
+        if (!triageItem) continue;
+        await triageService.approveTriageItem(triageId);
+        if (triageItem.action_type === 'archive' || triageItem.action_type === 'archive_and_unsubscribe') {
+          if (triageItem.gmail_id) {
+            await labelService.applyLabelToGmailMessage(triageItem.gmail_id, 'Triage/Auto-Delete');
+          } else {
+            await labelService.applyLabel(triageItem.email_id, 'Triage/Auto-Delete');
           }
         }
       }
 
       res.json({
         success: true,
-        message: `Approved ${triageIds.length} items`
+        message: `Marked ${triageIds.length} items (use Delete all auto-delete to archive)`
       });
     } catch (error) {
       console.error('Error bulk approving:', error);
