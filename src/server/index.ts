@@ -6,6 +6,12 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import createMemoryStore from 'memorystore';
 
+// Load .env from project root first (so configs see it regardless of cwd)
+dotenv.config({ path: path.resolve(__dirname, '..', '..', '.env') });
+if (!process.env.GMAIL_CLIENT_ID && !process.env.PORT) {
+  dotenv.config();
+}
+
 // Import database and services
 import getDatabase from './config/database';
 import { AuthService } from './services/auth.service';
