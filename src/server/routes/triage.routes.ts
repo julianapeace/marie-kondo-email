@@ -289,5 +289,83 @@ export function createTriageRouter(
     }
   });
 
+  // Sender rules
+  router.get('/sender-rules', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const rules = db.getSenderRules(userId);
+      res.json({ success: true, data: rules });
+    } catch (error) {
+      console.error('Error getting sender rules:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get sender rules'
+      });
+    }
+  });
+
+  router.post('/sender-rules', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const { kind, value } = req.body;
+      if (kind !== 'allowlist' && kind !== 'blocklist') {
+        return res.status(400).json({
+          success: false,
+          error: 'kind must be allowlist or blocklist'
+        });
+      }
+      const trimmed = typeof value === 'string' ? value.trim() : '';
+      if (trimmed.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'value must be a non-empty string (email or @domain)'
+        });
+      }
+      const id = db.createSenderRule(userId, kind, trimmed);
+      const rules = db.getSenderRules(userId);
+      const created = rules.find((r: { id: number }) => r.id === id);
+      if (!created) {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create sender rule'
+        });
+      }
+      res.status(201).json(created);
+    } catch (error) {
+      console.error('Error creating sender rule:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to create sender rule'
+      });
+    }
+  });
+
+  router.delete('/sender-rules/:id', requireAuth, (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const id = parseInt(req.params.id, 10);
+      if (Number.isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid rule id'
+        });
+      }
+      const deleted = db.deleteSenderRule(id, userId);
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          error: 'Sender rule not found'
+        });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting sender rule:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete sender rule'
+      });
+    }
+  });
+
   return router;
 }
