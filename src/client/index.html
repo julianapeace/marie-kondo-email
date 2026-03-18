@@ -117,6 +117,19 @@
                         </ul>
                     </div>
 
+                    <section id="sender-rules-section" class="sender-rules-section">
+                        <h3>Sender rules</h3>
+                        <ul id="sender-rules-list" class="sender-rules-list"></ul>
+                        <div class="sender-rules-form">
+                            <select id="sender-rule-kind" class="sender-rule-kind">
+                                <option value="allowlist">Allowlist</option>
+                                <option value="blocklist">Blocklist</option>
+                            </select>
+                            <input type="text" id="sender-rule-value" class="sender-rule-value" placeholder="email@example.com or @domain.com" />
+                            <button type="button" id="sender-rule-add-btn" class="btn btn-primary btn-sm">Add rule</button>
+                        </div>
+                    </section>
+
                     <div id="triage-queue" class="triage-queue">
                         <p class="loading">Loading triage items...</p>
                     </div>

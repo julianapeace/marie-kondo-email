@@ -47,6 +47,13 @@ class MarieKondoEmailApp {
     const executeAutoDeleteBtn = document.getElementById('execute-auto-delete-btn');
     executeAutoDeleteBtn?.addEventListener('click', () => this.handleExecuteAutoDelete());
 
+    // Sender rules
+    document.getElementById('sender-rule-add-btn')?.addEventListener('click', () => this.handleAddSenderRule());
+    document.getElementById('sender-rules-list')?.addEventListener('click', (e) => {
+      const target = (e.target as HTMLElement).closest('[data-delete-rule-id]');
+      if (target) this.handleDeleteSenderRule(Number((target as HTMLElement).dataset.deleteRuleId));
+    });
+
     // Confirm archive modal
     const confirmArchiveModal = document.getElementById('confirm-archive-modal');
     const confirmArchiveCancel = document.getElementById('confirm-archive-cancel');
@@ -149,6 +156,7 @@ class MarieKondoEmailApp {
         this.loadDashboard();
         break;
       case 'triage':
+        this.loadSenderRules();
         this.loadTriageQueue();
         break;
       case 'emails':
@@ -240,6 +248,71 @@ class MarieKondoEmailApp {
     `
       )
       .join('');
+  }
+
+  private async loadSenderRules() {
+    const list = document.getElementById('sender-rules-list');
+    if (!list) return;
+
+    const response = await api.getSenderRules();
+    if (!response.success || !Array.isArray(response.data)) {
+      list.innerHTML = '<li class="loading">Failed to load rules.</li>';
+      return;
+    }
+
+    const rules = response.data as { id: number; kind: string; value: string }[];
+    const kindLabel = (k: string) => (k === 'allowlist' ? 'Allowlist' : 'Blocklist');
+    if (rules.length === 0) {
+      list.innerHTML = '<li class="sender-rules-empty">No rules yet. Add one below.</li>';
+      return;
+    }
+
+    list.innerHTML = rules
+      .map(
+        (r) =>
+          `<li class="sender-rule-row">
+            <span class="sender-rule-kind-label">${kindLabel(r.kind)}</span>
+            <span class="sender-rule-value">${this.escapeHtml(r.value)}</span>
+            <button type="button" class="btn btn-danger btn-sm sender-rule-delete" data-delete-rule-id="${r.id}" title="Delete">Delete</button>
+          </li>`
+      )
+      .join('');
+  }
+
+  private escapeHtml(s: string): string {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  private async handleAddSenderRule() {
+    const valueInput = document.getElementById('sender-rule-value') as HTMLInputElement;
+    const kindSelect = document.getElementById('sender-rule-kind') as HTMLSelectElement;
+    const value = valueInput?.value?.trim() || '';
+    if (!value) {
+      this.showToast('Enter an email or @domain', 'info');
+      return;
+    }
+    const kind = kindSelect?.value || 'allowlist';
+    const response = await api.createSenderRule({ kind, value });
+    if (response.success) {
+      this.showToast('Rule added', 'success');
+      valueInput.value = '';
+      await this.loadSenderRules();
+      this.loadTriageQueue();
+    } else {
+      this.showToast(response.error || 'Failed to add rule', 'error');
+    }
+  }
+
+  private async handleDeleteSenderRule(id: number) {
+    const response = await api.deleteSenderRule(id);
+    if (response.success) {
+      this.showToast('Rule removed', 'success');
+      await this.loadSenderRules();
+    } else {
+      this.showToast(response.error || 'Failed to delete rule', 'error');
+    }
   }
 
   private async loadTriageQueue() {

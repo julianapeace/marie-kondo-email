@@ -417,6 +417,89 @@ body {
     margin-left: 20px;
 }
 
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Sender rules */
+.sender-rules-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+}
+
+.sender-rules-section h3 {
+    margin-bottom: 12px;
+    color: #333;
+    font-size: 16px;
+}
+
+.sender-rules-list {
+    list-style: none;
+    margin-bottom: 16px;
+}
+
+.sender-rules-list .loading,
+.sender-rules-empty {
+    color: #999;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.sender-rule-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+}
+
+.sender-rule-row:last-child {
+    border-bottom: none;
+}
+
+.sender-rule-kind-label {
+    font-weight: 600;
+    color: #667eea;
+    min-width: 80px;
+}
+
+.sender-rule-value {
+    flex: 1;
+    color: #333;
+}
+
+.sender-rules-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.sender-rules-form .sender-rule-kind {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.sender-rules-form .sender-rule-value {
+    flex: 1;
+    min-width: 200px;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.sender-rule-delete {
+    margin-left: auto;
+}
+
 /* Email List */
 .emails-list, .senders-list {
     background: white;

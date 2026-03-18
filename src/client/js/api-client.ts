@@ -119,6 +119,35 @@ class ApiClient {
     });
   }
 
+  async getSenderRules(): Promise<ApiResponse<any[]>> {
+    return this.request('/triage/sender-rules');
+  }
+
+  async createSenderRule(body: { kind: string; value: string }): Promise<ApiResponse<any>> {
+    const res = await fetch(`${this.baseUrl}/triage/sender-rules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    const data = res.ok ? await res.json() : await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: (data as any).error || 'Request failed' };
+    }
+    return { success: true, data };
+  }
+
+  async deleteSenderRule(id: number): Promise<ApiResponse> {
+    const res = await fetch(`${this.baseUrl}/triage/sender-rules/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (res.status === 204) return { success: true };
+    if (res.status === 404) return { success: false, error: 'Not found' };
+    const data = await res.json().catch(() => ({}));
+    return { success: false, error: (data as any).error || 'Request failed' };
+  }
+
   async getAutoDeletePreview(): Promise<ApiResponse<{ count: number }>> {
     return this.request('/triage/auto-delete-preview');
   }
