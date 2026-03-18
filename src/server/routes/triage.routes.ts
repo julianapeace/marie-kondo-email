@@ -19,9 +19,20 @@ export function createTriageRouter(
     try {
       const userId = req.userId!;
       const status = (req.query.status as string) || 'pending';
+      const sender = req.query.sender as string | undefined;
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+      const actionType = req.query.actionType as string | undefined;
+      const minConfidence = req.query.minConfidence as string | undefined;
+      const search = req.query.search as string | undefined;
+
+      const filters =
+        sender != null || dateFrom != null || dateTo != null || actionType != null || minConfidence != null || search != null
+          ? { sender, dateFrom, dateTo, actionType, minConfidence: minConfidence != null && minConfidence !== '' ? Number(minConfidence) : undefined, search }
+          : undefined;
 
       const triageService = new TriageService(db, userId);
-      const queue = await triageService.getTriageQueue(status);
+      const queue = await triageService.getTriageQueue(status, filters);
 
       res.json({
         success: true,

@@ -160,8 +160,18 @@ export class TriageService {
     }
   }
 
-  async getTriageQueue(status: string = 'pending'): Promise<any[]> {
-    return this.db.getTriageQueue(this.userId, status);
+  async getTriageQueue(
+    status: string = 'pending',
+    filters?: {
+      sender?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      actionType?: string;
+      minConfidence?: number;
+      search?: string;
+    }
+  ): Promise<any[]> {
+    return this.db.getTriageQueue(this.userId, status, filters);
   }
 }
 

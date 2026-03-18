@@ -283,17 +283,58 @@ export class DatabaseService {
     return result;
   }
 
-  getTriageQueue(userId: number, status: string = 'pending'): any[] {
-    const stmt = this.db.prepare(`
+  getTriageQueue(
+    userId: number,
+    status: string = 'pending',
+    filters?: {
+      sender?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      actionType?: string;
+      minConfidence?: number;
+      search?: string;
+    }
+  ): any[] {
+    const conditions: string[] = ['tq.user_id = ?', 'tq.status = ?'];
+    const params: (string | number)[] = [userId, status];
+
+    if (filters?.sender != null && filters.sender !== '') {
+      conditions.push('e.from_email LIKE ?');
+      params.push('%' + filters.sender + '%');
+    }
+    if (filters?.dateFrom != null && filters.dateFrom !== '') {
+      conditions.push('e.date >= ?');
+      params.push(filters.dateFrom);
+    }
+    if (filters?.dateTo != null && filters.dateTo !== '') {
+      conditions.push('e.date <= ?');
+      params.push(filters.dateTo);
+    }
+    if (filters?.actionType != null && filters.actionType !== '') {
+      conditions.push('tq.action_type = ?');
+      params.push(filters.actionType);
+    }
+    if (filters?.minConfidence != null) {
+      conditions.push('tq.confidence_score >= ?');
+      params.push(filters.minConfidence);
+    }
+    if (filters?.search != null && filters.search !== '') {
+      const searchPattern = '%' + filters.search + '%';
+      conditions.push('(e.subject LIKE ? OR e.from_email LIKE ? OR e.snippet LIKE ?)');
+      params.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    const sql = `
       SELECT
         tq.*,
         e.gmail_id, e.subject, e.from_email, e.from_name, e.date, e.snippet
       FROM triage_queue tq
       JOIN emails e ON tq.email_id = e.id
-      WHERE tq.user_id = ? AND tq.status = ?
+      WHERE ${conditions.join(' AND ')}
       ORDER BY tq.confidence_score DESC, tq.created_at ASC
-    `);
-    stmt.bind([userId, status]);
+    `;
+    const stmt = this.db.prepare(sql);
+    stmt.bind(params);
 
     const items: any[] = [];
     while (stmt.step()) {
