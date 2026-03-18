@@ -108,6 +108,36 @@ export function createTriageRouter(
     }
   });
 
+  // Preview auto-delete: count emails with Triage/Auto-Delete label
+  router.get('/auto-delete-preview', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const auth = await authService.getAuthenticatedClient(userId);
+      const gmailService = new GmailService(auth);
+
+      const autoDeleteLabelId = await gmailService.getOrCreateLabel('Triage/Auto-Delete');
+      let count = 0;
+      let pageToken: string | undefined;
+
+      do {
+        const { messages, nextPageToken } = await gmailService.listMessagesByLabel(autoDeleteLabelId, 500, pageToken);
+        count += messages.length;
+        pageToken = nextPageToken;
+      } while (pageToken);
+
+      res.json({
+        success: true,
+        data: { count }
+      });
+    } catch (error) {
+      console.error('Error getting auto-delete preview:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get auto-delete preview'
+      });
+    }
+  });
+
   // Execute auto-delete: archive all emails with Triage/Auto-Delete label
   router.post('/execute-auto-delete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
