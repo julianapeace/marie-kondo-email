@@ -239,6 +239,14 @@ export class GmailService {
     await this.batchModifyLabels(messageIds, [], ['INBOX']);
   }
 
+  async moveToInbox(messageIds: string[]): Promise<void> {
+    const chunkSize = 100;
+    for (let i = 0; i < messageIds.length; i += chunkSize) {
+      const chunk = messageIds.slice(i, i + chunkSize);
+      await this.batchModifyLabels(chunk, ['INBOX'], []);
+    }
+  }
+
   async listLabels(): Promise<gmail_v1.Schema$Label[]> {
     try {
       const response = await this.gmail.users.labels.list({
