@@ -475,6 +475,20 @@ export class DatabaseService {
     return logs;
   }
 
+  getLastArchiveBulkLog(userId: number, withinMinutes: number): { target_id: string; created_at: string } | null {
+    const stmt = this.db.prepare(`
+      SELECT target_id, created_at FROM action_log
+      WHERE user_id = ? AND action_type = 'archive_bulk' AND status = 'success'
+        AND datetime(created_at) >= datetime('now', '-' || ? || ' minutes')
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
+    stmt.bind([userId, withinMinutes]);
+    const result: any = stmt.step() ? stmt.getAsObject() : null;
+    stmt.free();
+    return result ? { target_id: result.target_id, created_at: result.created_at } : null;
+  }
+
   // Dashboard statistics
   getDashboardStats(userId: number): any {
     const getCount = (query: string, params: any[]): number => {

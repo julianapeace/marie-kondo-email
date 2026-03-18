@@ -209,6 +209,41 @@ export function createTriageRouter(
     }
   });
 
+  // Undo last archive (restore to inbox)
+  router.post('/undo-last-archive', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const log = db.getLastArchiveBulkLog(userId, 2);
+      if (!log) {
+        return res.status(404).json({
+          success: false,
+          error: 'Nothing to undo'
+        });
+      }
+      const ids = log.target_id.split(',').map((s) => s.trim()).filter(Boolean);
+      if (ids.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nothing to undo'
+        });
+      }
+      const auth = await authService.getAuthenticatedClient(userId);
+      const gmailService = new GmailService(auth);
+      await gmailService.moveToInbox(ids);
+      db.logAction(userId, 'undo_archive', 'emails', log.target_id, 'success', undefined, { count: ids.length });
+      res.json({
+        success: true,
+        data: { restored: ids.length }
+      });
+    } catch (error) {
+      console.error('Error undoing last archive:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to undo last archive'
+      });
+    }
+  });
+
   // Bulk approve
   router.post('/bulk-approve', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
