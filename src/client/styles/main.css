@@ -583,6 +583,28 @@ body {
     border-left: 4px solid #667eea;
 }
 
+.toast-undo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toast-undo-btn {
+    margin-left: 4px;
+    padding: 4px 10px;
+    background: transparent;
+    border: 1px solid #27ae60;
+    color: #27ae60;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.toast-undo-btn:hover {
+    background: #27ae60;
+    color: white;
+}
+
 /* Checkbox */
 input[type="checkbox"] {
     width: 18px;

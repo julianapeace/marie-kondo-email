@@ -127,6 +127,10 @@ class ApiClient {
     return this.request('/triage/execute-auto-delete', { method: 'POST' });
   }
 
+  async undoLastArchive(): Promise<ApiResponse<{ restored: number }>> {
+    return this.request('/triage/undo-last-archive', { method: 'POST' });
+  }
+
   // Unsubscribe endpoints
   async getUnsubscribeMethods(emailId: number): Promise<ApiResponse<any[]>> {
     return this.request(`/unsubscribe/${emailId}`);

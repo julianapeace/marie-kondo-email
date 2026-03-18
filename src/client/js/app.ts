@@ -4,6 +4,8 @@ import { api } from './api-client';
 class MarieKondoEmailApp {
   private currentView = 'dashboard';
   private selectedTriageIds: Set<number> = new Set();
+  private undoArchiveTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private undoBannerEl: HTMLElement | null = null;
 
   constructor() {
     this.init();
@@ -348,17 +350,29 @@ class MarieKondoEmailApp {
   }
 
   private async handleExecuteAutoDelete() {
-    const response = await api.getAutoDeletePreview();
-    if (!response.success) {
-      this.showToast(response.error || 'Failed to get preview', 'error');
-      return;
+    const btn = document.getElementById('execute-auto-delete-btn') as HTMLButtonElement;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Checking...';
     }
-    const count = response.data?.count ?? 0;
-    if (count === 0) {
-      this.showToast('No emails labeled for auto-delete', 'info');
-      return;
+    try {
+      const response = await api.getAutoDeletePreview();
+      if (!response.success) {
+        this.showToast(response.error || 'Failed to get preview', 'error');
+        return;
+      }
+      const count = response.data?.count ?? 0;
+      if (count === 0) {
+        this.showToast('No emails labeled for auto-delete', 'info');
+        return;
+      }
+      this.openConfirmArchiveModal(count);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Delete all auto-delete';
+      }
     }
-    this.openConfirmArchiveModal(count);
   }
 
   private openConfirmArchiveModal(count: number) {
@@ -374,6 +388,46 @@ class MarieKondoEmailApp {
     document.getElementById('confirm-archive-modal')?.classList.add('hidden');
   }
 
+  private dismissUndoBanner() {
+    if (this.undoArchiveTimeoutId !== null) {
+      clearTimeout(this.undoArchiveTimeoutId);
+      this.undoArchiveTimeoutId = null;
+    }
+    this.undoBannerEl?.remove();
+    this.undoBannerEl = null;
+  }
+
+  private showUndoBanner(archived: number) {
+    this.dismissUndoBanner();
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const banner = document.createElement('div');
+    banner.className = 'toast success toast-undo';
+    banner.innerHTML = `Archived ${archived} email(s). <button type="button" class="toast-undo-btn">Undo</button>`;
+
+    const undoBtn = banner.querySelector('.toast-undo-btn');
+    undoBtn?.addEventListener('click', () => this.handleUndoArchive());
+
+    container.appendChild(banner);
+    this.undoBannerEl = banner;
+
+    this.undoArchiveTimeoutId = setTimeout(() => {
+      this.dismissUndoBanner();
+    }, 60000);
+  }
+
+  private async handleUndoArchive() {
+    this.dismissUndoBanner();
+    const response = await api.undoLastArchive();
+    if (response.success && response.data?.restored !== undefined) {
+      this.showToast(`Restored ${response.data.restored} to inbox`, 'success');
+      this.loadDashboard();
+    } else {
+      this.showToast(response.error || 'Undo failed', 'error');
+    }
+  }
+
   private async handleConfirmArchiveConfirm() {
     this.closeConfirmArchiveModal();
     const btn = document.getElementById('execute-auto-delete-btn') as HTMLButtonElement;
@@ -384,12 +438,11 @@ class MarieKondoEmailApp {
     try {
       const response = await api.executeAutoDelete();
       if (response.success && response.data?.archived !== undefined) {
-        this.showToast(
-          response.data.archived === 0
-            ? 'No emails labeled for auto-delete'
-            : `Archived ${response.data.archived} email(s)`,
-          'success'
-        );
+        if (response.data.archived === 0) {
+          this.showToast('No emails labeled for auto-delete', 'success');
+        } else {
+          this.showUndoBanner(response.data.archived);
+        }
         this.loadDashboard();
       } else {
         this.showToast(response.error || 'Failed to execute auto-delete', 'error');
