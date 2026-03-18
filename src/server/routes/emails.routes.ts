@@ -56,7 +56,26 @@ export function createEmailsRouter(
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
 
-      const emails = db.getEmails(userId, limit, offset);
+      const filters: { sender?: string; dateFrom?: string; dateTo?: string; promotional?: boolean; search?: string } = {};
+      if (req.query.sender != null && req.query.sender !== '') {
+        filters.sender = String(req.query.sender);
+      }
+      if (req.query.dateFrom != null && req.query.dateFrom !== '') {
+        filters.dateFrom = String(req.query.dateFrom);
+      }
+      if (req.query.dateTo != null && req.query.dateTo !== '') {
+        filters.dateTo = String(req.query.dateTo);
+      }
+      if (req.query.promotional !== undefined && req.query.promotional !== '') {
+        const v = String(req.query.promotional).toLowerCase();
+        if (v === 'true') filters.promotional = true;
+        else if (v === 'false') filters.promotional = false;
+      }
+      if (req.query.search != null && req.query.search !== '') {
+        filters.search = String(req.query.search);
+      }
+
+      const emails = db.getEmails(userId, limit, offset, Object.keys(filters).length > 0 ? filters : undefined);
 
       res.json({
         success: true,

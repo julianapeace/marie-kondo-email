@@ -216,14 +216,52 @@ export class DatabaseService {
     return email;
   }
 
-  getEmails(userId: number, limit: number = 50, offset: number = 0): any[] {
-    const stmt = this.db.prepare(`
+  getEmails(
+    userId: number,
+    limit: number = 50,
+    offset: number = 0,
+    filters?: {
+      sender?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      promotional?: boolean;
+      search?: string;
+    }
+  ): any[] {
+    const conditions: string[] = ['user_id = ?'];
+    const params: (string | number)[] = [userId];
+
+    if (filters?.sender != null && filters.sender !== '') {
+      conditions.push('from_email LIKE ?');
+      params.push('%' + filters.sender + '%');
+    }
+    if (filters?.dateFrom != null && filters.dateFrom !== '') {
+      conditions.push('date >= ?');
+      params.push(filters.dateFrom);
+    }
+    if (filters?.dateTo != null && filters.dateTo !== '') {
+      conditions.push('date <= ?');
+      params.push(filters.dateTo);
+    }
+    if (filters?.promotional !== undefined) {
+      conditions.push('is_promotional = ?');
+      params.push(filters.promotional ? 1 : 0);
+    }
+    if (filters?.search != null && filters.search !== '') {
+      const searchPattern = '%' + filters.search + '%';
+      conditions.push('(subject LIKE ? OR from_email LIKE ? OR snippet LIKE ?)');
+      params.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    params.push(limit, offset);
+    const sql = `
       SELECT * FROM emails
-      WHERE user_id = ?
+      WHERE ${conditions.join(' AND ')}
       ORDER BY date DESC
       LIMIT ? OFFSET ?
-    `);
-    stmt.bind([userId, limit, offset]);
+    `;
+    const stmt = this.db.prepare(sql);
+    stmt.bind(params);
 
     const emails: any[] = [];
     while (stmt.step()) {
