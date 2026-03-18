@@ -91,8 +91,29 @@ class ApiClient {
     }
   }
 
-  async getEmails(limit = 50, offset = 0): Promise<ApiResponse<any[]>> {
-    return this.request(`/emails?limit=${limit}&offset=${offset}`);
+  async getEmails(
+    limit = 50,
+    offset = 0,
+    filters?: {
+      sender?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      promotional?: boolean;
+      search?: string;
+    }
+  ): Promise<ApiResponse<any[]>> {
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    params.set('offset', String(offset));
+    if (filters) {
+      if (filters.sender?.trim()) params.set('sender', filters.sender.trim());
+      if (filters.dateFrom?.trim()) params.set('dateFrom', filters.dateFrom.trim());
+      if (filters.dateTo?.trim()) params.set('dateTo', filters.dateTo.trim());
+      if (filters.promotional === true) params.set('promotional', 'true');
+      if (filters.promotional === false) params.set('promotional', 'false');
+      if (filters.search?.trim()) params.set('search', filters.search.trim());
+    }
+    return this.request(`/emails?${params.toString()}`);
   }
 
   async getEmail(id: number): Promise<ApiResponse<any>> {
@@ -100,8 +121,28 @@ class ApiClient {
   }
 
   // Triage endpoints
-  async getTriageQueue(status = 'pending'): Promise<ApiResponse<any[]>> {
-    return this.request(`/triage/queue?status=${status}`);
+  async getTriageQueue(
+    status = 'pending',
+    filters?: {
+      sender?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      actionType?: string;
+      minConfidence?: number;
+      search?: string;
+    }
+  ): Promise<ApiResponse<any[]>> {
+    const params = new URLSearchParams();
+    params.set('status', status);
+    if (filters) {
+      if (filters.sender?.trim()) params.set('sender', filters.sender.trim());
+      if (filters.dateFrom?.trim()) params.set('dateFrom', filters.dateFrom.trim());
+      if (filters.dateTo?.trim()) params.set('dateTo', filters.dateTo.trim());
+      if (filters.actionType?.trim()) params.set('actionType', filters.actionType.trim());
+      if (filters.minConfidence != null && !Number.isNaN(Number(filters.minConfidence))) params.set('minConfidence', String(filters.minConfidence));
+      if (filters.search?.trim()) params.set('search', filters.search.trim());
+    }
+    return this.request(`/triage/queue?${params.toString()}`);
   }
 
   async approveTriage(id: number): Promise<ApiResponse> {

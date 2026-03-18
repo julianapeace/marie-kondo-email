@@ -1,9 +1,31 @@
 import { api } from './api-client';
 
+const TRIAGE_FILTERS_STORAGE_KEY = 'triageFilters';
+const EMAIL_FILTERS_STORAGE_KEY = 'emailFilters';
+
+interface TriageFilters {
+  sender?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  actionType?: string;
+  minConfidence?: number;
+  search?: string;
+}
+
+interface EmailFilters {
+  sender?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  promotional?: boolean;
+  search?: string;
+}
+
 // Main App Class
 class MarieKondoEmailApp {
   private currentView = 'dashboard';
   private selectedTriageIds: Set<number> = new Set();
+  private triageFilters: TriageFilters = {};
+  private emailFilters: EmailFilters = {};
   private undoArchiveTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private undoBannerEl: HTMLElement | null = null;
 
@@ -12,8 +34,100 @@ class MarieKondoEmailApp {
   }
 
   private async init() {
+    this.loadTriageFiltersFromStorage();
+    this.loadEmailFiltersFromStorage();
     this.setupEventListeners();
     await this.checkAuthStatus();
+  }
+
+  private loadTriageFiltersFromStorage() {
+    try {
+      const raw = sessionStorage.getItem(TRIAGE_FILTERS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as TriageFilters;
+        if (parsed && typeof parsed === 'object') this.triageFilters = { ...parsed };
+      }
+    } catch {
+      this.triageFilters = {};
+    }
+  }
+
+  private saveTriageFiltersToStorage() {
+    try {
+      sessionStorage.setItem(TRIAGE_FILTERS_STORAGE_KEY, JSON.stringify(this.triageFilters));
+    } catch {
+      // ignore
+    }
+  }
+
+  private loadEmailFiltersFromStorage() {
+    try {
+      const raw = sessionStorage.getItem(EMAIL_FILTERS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as EmailFilters;
+        if (parsed && typeof parsed === 'object') this.emailFilters = { ...parsed };
+      }
+    } catch {
+      this.emailFilters = {};
+    }
+  }
+
+  private saveEmailFiltersToStorage() {
+    try {
+      sessionStorage.setItem(EMAIL_FILTERS_STORAGE_KEY, JSON.stringify(this.emailFilters));
+    } catch {
+      // ignore
+    }
+  }
+
+  private readTriageFiltersFromDOM(): TriageFilters {
+    const sender = (document.getElementById('filter-sender') as HTMLInputElement)?.value?.trim() || undefined;
+    const dateFrom = (document.getElementById('filter-date-from') as HTMLInputElement)?.value?.trim() || undefined;
+    const dateTo = (document.getElementById('filter-date-to') as HTMLInputElement)?.value?.trim() || undefined;
+    const actionType = (document.getElementById('filter-action-type') as HTMLSelectElement)?.value?.trim() || undefined;
+    const minConfidenceRaw = (document.getElementById('filter-min-confidence') as HTMLInputElement)?.value;
+    const minConfidence = minConfidenceRaw !== '' && minConfidenceRaw != null ? Number(minConfidenceRaw) : undefined;
+    const search = (document.getElementById('filter-search') as HTMLInputElement)?.value?.trim() || undefined;
+    return { sender, dateFrom, dateTo, actionType, minConfidence: Number.isNaN(minConfidence) ? undefined : minConfidence, search };
+  }
+
+  private applyTriageFiltersToDOM() {
+    const f = this.triageFilters;
+    const set = (id: string, value: string | number | undefined) => {
+      const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (el) el.value = value != null ? String(value) : '';
+    };
+    set('filter-sender', f.sender);
+    set('filter-date-from', f.dateFrom);
+    set('filter-date-to', f.dateTo);
+    set('filter-action-type', f.actionType ?? '');
+    set('filter-min-confidence', f.minConfidence);
+    set('filter-search', f.search);
+  }
+
+  private readEmailFiltersFromDOM(): EmailFilters {
+    const sender = (document.getElementById('emails-filter-sender') as HTMLInputElement)?.value?.trim() || undefined;
+    const dateFrom = (document.getElementById('emails-filter-date-from') as HTMLInputElement)?.value?.trim() || undefined;
+    const dateTo = (document.getElementById('emails-filter-date-to') as HTMLInputElement)?.value?.trim() || undefined;
+    const promotionalRaw = (document.getElementById('emails-filter-promotional') as HTMLSelectElement)?.value;
+    let promotional: boolean | undefined;
+    if (promotionalRaw === 'true') promotional = true;
+    else if (promotionalRaw === 'false') promotional = false;
+    const search = (document.getElementById('emails-filter-search') as HTMLInputElement)?.value?.trim() || undefined;
+    return { sender, dateFrom, dateTo, promotional, search };
+  }
+
+  private applyEmailFiltersToDOM() {
+    const f = this.emailFilters;
+    const set = (id: string, value: string | boolean | undefined) => {
+      const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (el) el.value = value != null ? String(value) : '';
+    };
+    set('emails-filter-sender', f.sender);
+    set('emails-filter-date-from', f.dateFrom);
+    set('emails-filter-date-to', f.dateTo);
+    set('emails-filter-promotional', f.promotional === true ? 'true' : f.promotional === false ? 'false' : '');
+    set('emails-filter-search', f.search);
   }
 
   private setupEventListeners() {
@@ -46,6 +160,12 @@ class MarieKondoEmailApp {
     // Delete all auto-delete button
     const executeAutoDeleteBtn = document.getElementById('execute-auto-delete-btn');
     executeAutoDeleteBtn?.addEventListener('click', () => this.handleExecuteAutoDelete());
+
+    // Triage filters Apply
+    document.getElementById('triage-filters-apply')?.addEventListener('click', () => this.handleApplyTriageFilters());
+
+    // Emails filters Apply
+    document.getElementById('emails-filters-apply')?.addEventListener('click', () => this.handleApplyEmailFilters());
 
     // Sender rules
     document.getElementById('sender-rule-add-btn')?.addEventListener('click', () => this.handleAddSenderRule());
@@ -156,10 +276,12 @@ class MarieKondoEmailApp {
         this.loadDashboard();
         break;
       case 'triage':
+        this.applyTriageFiltersToDOM();
         this.loadSenderRules();
         this.loadTriageQueue();
         break;
       case 'emails':
+        this.applyEmailFiltersToDOM();
         this.loadEmails();
         break;
       case 'senders':
@@ -305,6 +427,18 @@ class MarieKondoEmailApp {
     }
   }
 
+  private handleApplyTriageFilters() {
+    this.triageFilters = this.readTriageFiltersFromDOM();
+    this.saveTriageFiltersToStorage();
+    this.loadTriageQueue();
+  }
+
+  private handleApplyEmailFilters() {
+    this.emailFilters = this.readEmailFiltersFromDOM();
+    this.saveEmailFiltersToStorage();
+    this.loadEmails();
+  }
+
   private async handleDeleteSenderRule(id: number) {
     const response = await api.deleteSenderRule(id);
     if (response.success) {
@@ -321,7 +455,7 @@ class MarieKondoEmailApp {
 
     queue.innerHTML = '<p class="loading">Loading...</p>';
 
-    const response = await api.getTriageQueue();
+    const response = await api.getTriageQueue('pending', this.triageFilters);
 
     if (!response.success || !Array.isArray(response.data)) {
       queue.innerHTML = `<p class="loading">${response.error || 'Failed to load triage queue.'}</p>`;
@@ -534,7 +668,9 @@ class MarieKondoEmailApp {
 
     list.innerHTML = '<p class="loading">Loading...</p>';
 
-    const response = await api.getEmails();
+    const limit = 50;
+    const offset = 0;
+    const response = await api.getEmails(limit, offset, this.emailFilters);
 
     if (response.success && response.data) {
       if (response.data.length === 0) {

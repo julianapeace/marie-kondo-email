@@ -130,6 +130,24 @@
                         </div>
                     </section>
 
+                    <div id="triage-filters" class="triage-filters">
+                        <label>Sender <input type="text" id="filter-sender" placeholder="email or domain" /></label>
+                        <label>From <input type="date" id="filter-date-from" /></label>
+                        <label>To <input type="date" id="filter-date-to" /></label>
+                        <label>Action
+                            <select id="filter-action-type">
+                                <option value="">All</option>
+                                <option value="archive">Archive</option>
+                                <option value="unsubscribe">Unsubscribe</option>
+                                <option value="archive_and_unsubscribe">Archive and Unsubscribe</option>
+                                <option value="review">Review</option>
+                            </select>
+                        </label>
+                        <label>Min confidence <input type="number" id="filter-min-confidence" min="0" max="1" step="0.01" placeholder="0–1" /></label>
+                        <label>Search <input type="text" id="filter-search" placeholder="subject/sender..." /></label>
+                        <button type="button" id="triage-filters-apply" class="btn btn-primary">Apply</button>
+                    </div>
+
                     <div id="triage-queue" class="triage-queue">
                         <p class="loading">Loading triage items...</p>
                     </div>
@@ -140,6 +158,20 @@
             <div id="emails-view" class="view">
                 <div class="container">
                     <h2>Scanned Emails</h2>
+                    <div id="emails-filters" class="emails-filters">
+                        <label>Sender <input type="text" id="emails-filter-sender" placeholder="email or domain" /></label>
+                        <label>From <input type="date" id="emails-filter-date-from" /></label>
+                        <label>To <input type="date" id="emails-filter-date-to" /></label>
+                        <label>Promotional
+                            <select id="emails-filter-promotional">
+                                <option value="">All</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </label>
+                        <label>Search <input type="text" id="emails-filter-search" placeholder="subject/sender..." /></label>
+                        <button type="button" id="emails-filters-apply" class="btn btn-primary">Apply</button>
+                    </div>
                     <div id="emails-list" class="emails-list">
                         <p class="loading">Loading emails...</p>
                     </div>
