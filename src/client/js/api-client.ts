@@ -119,6 +119,10 @@ class ApiClient {
     });
   }
 
+  async getAutoDeletePreview(): Promise<ApiResponse<{ count: number }>> {
+    return this.request('/triage/auto-delete-preview');
+  }
+
   async executeAutoDelete(): Promise<ApiResponse<{ archived: number }>> {
     return this.request('/triage/execute-auto-delete', { method: 'POST' });
   }

@@ -45,6 +45,15 @@ class MarieKondoEmailApp {
     const executeAutoDeleteBtn = document.getElementById('execute-auto-delete-btn');
     executeAutoDeleteBtn?.addEventListener('click', () => this.handleExecuteAutoDelete());
 
+    // Confirm archive modal
+    const confirmArchiveModal = document.getElementById('confirm-archive-modal');
+    const confirmArchiveCancel = document.getElementById('confirm-archive-cancel');
+    const confirmArchiveConfirm = document.getElementById('confirm-archive-confirm');
+    const confirmArchiveOverlay = confirmArchiveModal?.querySelector('.modal-overlay');
+    confirmArchiveCancel?.addEventListener('click', () => this.closeConfirmArchiveModal());
+    confirmArchiveConfirm?.addEventListener('click', () => this.handleConfirmArchiveConfirm());
+    confirmArchiveOverlay?.addEventListener('click', () => this.closeConfirmArchiveModal());
+
     // Check for auth callback
     const params = new URLSearchParams(window.location.search);
     if (params.get('auth') === 'success') {
@@ -339,6 +348,34 @@ class MarieKondoEmailApp {
   }
 
   private async handleExecuteAutoDelete() {
+    const response = await api.getAutoDeletePreview();
+    if (!response.success) {
+      this.showToast(response.error || 'Failed to get preview', 'error');
+      return;
+    }
+    const count = response.data?.count ?? 0;
+    if (count === 0) {
+      this.showToast('No emails labeled for auto-delete', 'info');
+      return;
+    }
+    this.openConfirmArchiveModal(count);
+  }
+
+  private openConfirmArchiveModal(count: number) {
+    const modal = document.getElementById('confirm-archive-modal');
+    const countEl = document.getElementById('confirm-archive-count');
+    const btnCountEl = document.getElementById('confirm-archive-btn-count');
+    if (countEl) countEl.textContent = count.toString();
+    if (btnCountEl) btnCountEl.textContent = count.toString();
+    modal?.classList.remove('hidden');
+  }
+
+  private closeConfirmArchiveModal() {
+    document.getElementById('confirm-archive-modal')?.classList.add('hidden');
+  }
+
+  private async handleConfirmArchiveConfirm() {
+    this.closeConfirmArchiveModal();
     const btn = document.getElementById('execute-auto-delete-btn') as HTMLButtonElement;
     if (btn) {
       btn.disabled = true;
