@@ -119,6 +119,18 @@ CREATE INDEX IF NOT EXISTS idx_sender_stats_user_id ON sender_stats(user_id);
 CREATE INDEX IF NOT EXISTS idx_sender_stats_sender_email ON sender_stats(sender_email);
 CREATE INDEX IF NOT EXISTS idx_sender_stats_total_emails ON sender_stats(total_emails DESC);
 
+-- Triage sender rules (allowlist/blocklist per user)
+CREATE TABLE IF NOT EXISTS triage_sender_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    kind TEXT NOT NULL CHECK(kind IN ('allowlist', 'blocklist')),
+    value TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, kind, value),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_triage_sender_rules_user_id ON triage_sender_rules(user_id);
+
 -- Sessions table for express-session
 CREATE TABLE IF NOT EXISTS sessions (
     sid TEXT PRIMARY KEY,

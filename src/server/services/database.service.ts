@@ -438,6 +438,47 @@ export class DatabaseService {
     this.save();
   }
 
+  getSenderRules(userId: number): any[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM triage_sender_rules
+      WHERE user_id = ?
+      ORDER BY kind, value
+    `);
+    stmt.bind([userId]);
+    const rules: any[] = [];
+    while (stmt.step()) {
+      rules.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rules;
+  }
+
+  createSenderRule(userId: number, kind: string, value: string): number {
+    const stmt = this.db.prepare(`
+      INSERT INTO triage_sender_rules (user_id, kind, value)
+      VALUES (?, ?, ?)
+      RETURNING *
+    `);
+    stmt.bind([userId, kind, value]);
+    const result = stmt.step() ? stmt.getAsObject() : null;
+    stmt.free();
+    this.save();
+    return result ? (result.id as number) : 0;
+  }
+
+  deleteSenderRule(id: number, userId: number): boolean {
+    const stmt = this.db.prepare(`
+      DELETE FROM triage_sender_rules
+      WHERE id = ? AND user_id = ?
+    `);
+    stmt.bind([id, userId]);
+    stmt.step();
+    stmt.free();
+    const deleted = this.db.getRowsModified() === 1;
+    this.save();
+    return deleted;
+  }
+
   // Action log operations
   logAction(userId: number, actionType: string, targetType: string, targetId: string, status: 'success' | 'failed', errorMessage?: string, metadata?: any): void {
     const stmt = this.db.prepare(`
