@@ -13,3 +13,6 @@ marie-kondo-email-cleaner-client_secret_443834333086-oqgq70vgtd43pgbn3cdt4oejcr7
 
 # CreateOS auto-generated deploy config
 deploy-*
+
+# Git worktrees (subagent-driven development)
+.worktrees/
