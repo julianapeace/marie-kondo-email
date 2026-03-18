@@ -11,20 +11,19 @@ export class TriageService {
   constructor(private db: DatabaseService, private userId: number) {}
 
   async generateTriageSuggestions(emailIds?: number[]): Promise<TriageScore[]> {
-    // Get emails to analyze
-    let emails: any[];
+    const rules = this.db.getSenderRules(this.userId);
 
+    let emails: any[];
     if (emailIds) {
       emails = emailIds.map(id => this.db.getEmailById(id)).filter(e => e);
     } else {
-      // Get all promotional emails
       emails = this.db.getPromotionalEmails(this.userId, 500);
     }
 
     const suggestions: TriageScore[] = [];
 
     for (const email of emails) {
-      const score = await this.calculateTriageScore(email);
+      const score = await this.calculateTriageScore(email, rules);
       suggestions.push(score);
 
       // Create triage item in database if score is actionable
@@ -41,7 +40,38 @@ export class TriageService {
     return suggestions;
   }
 
-  private async calculateTriageScore(email: any): Promise<TriageScore> {
+  private senderMatchesRule(rule: { value: string }, fromEmail: string, domain: string): boolean {
+    const v = (rule.value || '').trim();
+    if (v.startsWith('@')) {
+      return v.slice(1).toLowerCase() === domain.toLowerCase();
+    }
+    return v.toLowerCase() === fromEmail.toLowerCase();
+  }
+
+  private async calculateTriageScore(email: any, rules: { kind: string; value: string }[]): Promise<TriageScore> {
+    const fromEmail = (email.from_email || '').trim();
+    const domain = fromEmail.includes('@') ? fromEmail.split('@')[1] : '';
+
+    if (rules.some(r => r.kind === 'allowlist' && this.senderMatchesRule(r, fromEmail, domain))) {
+      return {
+        emailId: email.id,
+        actionType: 'review',
+        confidenceScore: 0,
+        reason: 'Allowlisted sender'
+      };
+    }
+
+    const unsubMethods = this.db.getUnsubscribeMethodsByEmailId(email.id);
+    const hasUnsubscribe = unsubMethods.length > 0;
+    if (rules.some(r => r.kind === 'blocklist' && this.senderMatchesRule(r, fromEmail, domain))) {
+      return {
+        emailId: email.id,
+        actionType: hasUnsubscribe ? 'archive_and_unsubscribe' : 'archive',
+        confidenceScore: 85,
+        reason: 'Blocklisted sender'
+      };
+    }
+
     let score = 0;
     const reasons: string[] = [];
 
@@ -52,8 +82,6 @@ export class TriageService {
     }
 
     // Factor 2: Has unsubscribe link (+20 points)
-    const unsubMethods = this.db.getUnsubscribeMethodsByEmailId(email.id);
-    const hasUnsubscribe = unsubMethods.length > 0;
     if (hasUnsubscribe) {
       score += 20;
       reasons.push('Has unsubscribe option');
